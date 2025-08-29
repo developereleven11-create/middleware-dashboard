@@ -1,0 +1,9 @@
+{
+  "providers": [
+    {
+      "id": "provider_a",
+      "name": "Provider A",
+      "enabled": true
+    }
+  ]
+}
