@@ -1,0 +1,23 @@
+{
+  "base": 30,
+  "per_kg": 15,
+  "cod_fee": 20,
+  "zones": {
+    "Metro": {
+      "base": 28,
+      "per_kg": 14
+    },
+    "Tier1": {
+      "base": 30,
+      "per_kg": 15
+    },
+    "Tier2": {
+      "base": 35,
+      "per_kg": 18
+    },
+    "Rest": {
+      "base": 40,
+      "per_kg": 20
+    }
+  }
+}
