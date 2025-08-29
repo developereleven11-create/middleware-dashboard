@@ -1,0 +1,55 @@
+{
+  "zones": [
+    {
+      "name": "Metro",
+      "pincodes": [
+        "400",
+        "110",
+        "560",
+        "600",
+        "700"
+      ]
+    },
+    {
+      "name": "Tier1",
+      "pincodes": [
+        "452",
+        "411",
+        "380",
+        "302"
+      ]
+    },
+    {
+      "name": "Tier2",
+      "pincodes": [
+        "462",
+        "248",
+        "160"
+      ]
+    },
+    {
+      "name": "Rest",
+      "pincodes": []
+    }
+  ],
+  "slas": {
+    "provider_a": {
+      "Metro": {
+        "min_days": 1,
+        "max_days": 2
+      },
+      "Tier1": {
+        "min_days": 2,
+        "max_days": 3
+      },
+      "Tier2": {
+        "min_days": 3,
+        "max_days": 5
+      },
+      "Rest": {
+        "min_days": 4,
+        "max_days": 7
+      }
+    }
+  }
+}
