@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import mockOrders from '../../../data/mockOrders.json';
 
 export async function GET() {
   const MOCK = process.env.MOCK_MODE !== 'false';
 
   try {
     if (MOCK) {
-      return NextResponse.json({ ok: true, data: mockOrders });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockOrders.json`);
+      const data = await res.json();
+      return NextResponse.json({ ok: true, data });
     }
 
     const store = process.env.SHOPIFY_STORE;
@@ -20,16 +21,16 @@ export async function GET() {
     }
 
     const url = `https://${store}/admin/api/2024-07/orders.json?status=any&limit=50`;
-    const res = await fetch(url, {
+    const shopifyRes = await fetch(url, {
       headers: {
         'X-Shopify-Access-Token': token,
         'Content-Type': 'application/json',
       },
     });
 
-    if (!res.ok) throw new Error(`Shopify error ${res.status}`);
+    if (!shopifyRes.ok) throw new Error(`Shopify error ${shopifyRes.status}`);
 
-    const json = await res.json();
+    const json = await shopifyRes.json();
     return NextResponse.json({ ok: true, data: json.orders });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
