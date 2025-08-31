@@ -1,0 +1,4 @@
+[
+  { "order_number": "MOCK-1001", "awb": "AWB1", "status": "In Transit", "rto": false, "charges": { "total": 40 } },
+  { "order_number": "MOCK-1002", "awb": "AWB2", "status": "RTO", "rto": true, "charges": { "total": 50 } }
+]
