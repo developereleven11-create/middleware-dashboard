@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+async function loadMock(fileName: string) {
+  const filePath = path.join(process.cwd(), 'public', 'data', fileName);
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content);
+}
 
 export async function GET() {
   const MOCK = process.env.MOCK_MODE !== 'false';
 
   try {
     if (MOCK) {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockOrders.json`);
-      const data = await res.json();
+      const data = await loadMock('mockOrders.json');
       return NextResponse.json({ ok: true, data });
     }
 
@@ -20,17 +27,17 @@ export async function GET() {
       );
     }
 
-    const url = `https://${store}/admin/api/2024-07/orders.json?status=any&limit=50`;
-    const shopifyRes = await fetch(url, {
+    const url = `https://${store}/admin/api/2024-07/orders.json?status=any&limit=20`;
+    const res = await fetch(url, {
       headers: {
         'X-Shopify-Access-Token': token,
         'Content-Type': 'application/json',
       },
     });
 
-    if (!shopifyRes.ok) throw new Error(`Shopify error ${shopifyRes.status}`);
+    if (!res.ok) throw new Error(`Shopify error ${res.status}`);
+    const json = await res.json();
 
-    const json = await shopifyRes.json();
     return NextResponse.json({ ok: true, data: json.orders });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
