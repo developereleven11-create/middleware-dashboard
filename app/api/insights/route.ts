@@ -2,10 +2,27 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Helper to load mock JSON files from /public/data
 async function loadMock(fileName: string) {
   const filePath = path.join(process.cwd(), 'public', 'data', fileName);
   const content = await fs.readFile(filePath, 'utf-8');
   return JSON.parse(content);
+}
+
+// Helper to merge orders + shipments
+function mergeOrdersWithShipments(
+  orders: any[],
+  shipments: any[],
+  filterFn: (s: any) => boolean
+) {
+  return orders
+    .map((o) => {
+      const shipment = shipments.find(
+        (s: any) => s.order_number === o.order_number && filterFn(s)
+      );
+      return shipment ? { ...o, shipment } : null;
+    })
+    .filter(Boolean);
 }
 
 export async function GET() {
@@ -32,25 +49,12 @@ export async function GET() {
       shipments = shipmentsJson.data ?? [];
     }
 
-    // Join orders + shipments
-    const rto = orders.filter((o: any) =>
-      shipments.find((s: any) => s.order_number === o.order_number && s.rto)
+    const rto = mergeOrdersWithShipments(orders, shipments, (s) => s.rto);
+    const ofd = mergeOrdersWithShipments(orders, shipments, (s) =>
+      /ofd|out for delivery/i.test(s.status)
     );
-
-    const ofd = orders.filter((o: any) =>
-      shipments.find(
-        (s: any) =>
-          s.order_number === o.order_number &&
-          /ofd|out for delivery/i.test(s.status)
-      )
-    );
-
-    const inTransit = orders.filter((o: any) =>
-      shipments.find(
-        (s: any) =>
-          s.order_number === o.order_number &&
-          /transit/i.test(s.status)
-      )
+    const inTransit = mergeOrdersWithShipments(orders, shipments, (s) =>
+      /transit/i.test(s.status)
     );
 
     return NextResponse.json({ rto, ofd, inTransit });
