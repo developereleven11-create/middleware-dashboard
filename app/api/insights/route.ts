@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
-import mockOrders from '../../../data/mockOrders.json';
-import mockShipments from '../../../data/mockShipments.json';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+async function loadMock(fileName: string) {
+  const file = path.join(process.cwd(), 'data', fileName);
+  const content = await fs.readFile(file, 'utf-8');
+  return JSON.parse(content);
+}
 
 export async function GET() {
   try {
@@ -10,41 +16,28 @@ export async function GET() {
     let shipments: any[] = [];
 
     if (MOCK) {
-      orders = mockOrders as any[];
-      shipments = mockShipments as any[];
+      orders = await loadMock('mockOrders.json');
+      shipments = await loadMock('mockShipments.json');
     } else {
-      // fetch real Shopify orders
-      const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/orders`, {
-        cache: 'no-store',
-      });
+      const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/orders`, { cache: 'no-store' });
       const ordersJson = await ordersRes.json();
       orders = ordersJson.data ?? [];
 
-      // fetch real shipments (placeholder until provider is integrated)
-      const shipmentsRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/shipments`, {
-        cache: 'no-store',
-      });
+      const shipmentsRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/shipments`, { cache: 'no-store' });
       const shipmentsJson = await shipmentsRes.json();
       shipments = shipmentsJson.data ?? [];
     }
 
-    // classify orders
     const rto = orders.filter((o: any) =>
       shipments.find((s: any) => s.order_number === o.order_number && s.rto)
     );
 
     const ofd = orders.filter((o: any) =>
-      shipments.find(
-        (s: any) =>
-          s.order_number === o.order_number && /ofd|out for delivery/i.test(s.status)
-      )
+      shipments.find((s: any) => s.order_number === o.order_number && /ofd|out for delivery/i.test(s.status))
     );
 
     const inTransit = orders.filter((o: any) =>
-      shipments.find(
-        (s: any) =>
-          s.order_number === o.order_number && /transit/i.test(s.status)
-      )
+      shipments.find((s: any) => s.order_number === o.order_number && /transit/i.test(s.status))
     );
 
     return NextResponse.json({ rto, ofd, inTransit });
