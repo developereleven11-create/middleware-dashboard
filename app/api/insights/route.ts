@@ -8,17 +8,22 @@ export async function GET() {
     let shipments: any[] = [];
 
     if (MOCK) {
-      const oRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockOrders.json`);
+      const oRes = await fetch('/data/mockOrders.json');
       orders = await oRes.json();
 
-      const sRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockShipments.json`);
+      const sRes = await fetch('/data/mockShipments.json');
       shipments = await sRes.json();
     } else {
-      const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/orders`, { cache: 'no-store' });
+      const baseUrl =
+        process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : 'http://localhost:3000';
+
+      const ordersRes = await fetch(`${baseUrl}/api/orders`, { cache: 'no-store' });
       const ordersJson = await ordersRes.json();
       orders = ordersJson.data ?? [];
 
-      const shipmentsRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/shipments`, { cache: 'no-store' });
+      const shipmentsRes = await fetch(`${baseUrl}/api/shipments`, { cache: 'no-store' });
       const shipmentsJson = await shipmentsRes.json();
       shipments = shipmentsJson.data ?? [];
     }
@@ -28,11 +33,19 @@ export async function GET() {
     );
 
     const ofd = orders.filter((o: any) =>
-      shipments.find((s: any) => s.order_number === o.order_number && /ofd|out for delivery/i.test(s.status))
+      shipments.find(
+        (s: any) =>
+          s.order_number === o.order_number &&
+          /ofd|out for delivery/i.test(s.status)
+      )
     );
 
     const inTransit = orders.filter((o: any) =>
-      shipments.find((s: any) => s.order_number === o.order_number && /transit/i.test(s.status))
+      shipments.find(
+        (s: any) =>
+          s.order_number === o.order_number &&
+          /transit/i.test(s.status)
+      )
     );
 
     return NextResponse.json({ rto, ofd, inTransit });
