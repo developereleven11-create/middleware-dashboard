@@ -9,21 +9,21 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 export default function InsightsPage() {
   const [pageInfo, setPageInfo] = useState<string | null>(null);
   const { data, error, isLoading } = useSWR(
-    `/api/orders?limit=50${pageInfo ? `&page_info=${pageInfo}` : ''}`,
+    `/api/insights?limit=50${pageInfo ? `&page_info=${pageInfo}` : ''}`,
     fetcher
   );
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   if (isLoading) return <div>Loading...</div>;
-  if (error) return <div className="text-red-400">Failed to load orders.</div>;
-  if (!data) return null;
+  if (error || !data?.ok) return <div className="text-red-400">Failed to load insights.</div>;
 
   const orders = data.data ?? [];
 
   return (
     <div className="p-8">
-      {/* KPI Cards */}
+      {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-        <KPI label="Total Orders (this page)" value={orders.length} />
+        <KPI label="Orders on this page" value={orders.length} />
       </div>
 
       {/* Orders Table */}
@@ -32,18 +32,27 @@ export default function InsightsPage() {
           <thead className="bg-white/5">
             <tr>
               <th className="p-3 text-left">Order #</th>
-              <th className="p-3 text-left">Date</th>
-              <th className="p-3 text-left">Total</th>
-              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Pincode</th>
+              <th className="p-3 text-left">State</th>
+              <th className="p-3 text-left">Shipment</th>
+              <th className="p-3 text-left">TAT</th>
+              <th className="p-3 text-left">Remittance</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((o: any) => (
-              <tr key={o.id} className="border-t border-white/10 hover:bg-white/5 transition">
-                <td className="p-3 text-blue-400">{o.order_number}</td>
-                <td className="p-3">{new Date(o.created_at).toLocaleDateString()}</td>
-                <td className="p-3">₹{o.total_price}</td>
-                <td className="p-3"><StatusBadge status={o.fulfillment_status ?? 'Unfulfilled'} /></td>
+              <tr key={o.id} className="border-t border-white/10 hover:bg-white/5">
+                <td
+                  className="p-3 text-blue-400 cursor-pointer hover:underline"
+                  onClick={() => setSelectedOrder(o)}
+                >
+                  {o.order_number}
+                </td>
+                <td className="p-3">{o.shipping_address?.zip ?? '—'}</td>
+                <td className="p-3">{o.shipping_address?.province_code ?? '—'}</td>
+                <td className="p-3"><StatusBadge status={o.shipment?.status ?? 'Pending'} /></td>
+                <td className="p-3"><StatusBadge status={'On Time'} /></td>
+                <td className="p-3"><StatusBadge status={'Not Settled'} /></td>
               </tr>
             ))}
           </tbody>
@@ -67,6 +76,28 @@ export default function InsightsPage() {
           Next ➡
         </button>
       </div>
+
+      {/* Drawer */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+          <div className="w-full sm:w-[500px] bg-gray-900/70 backdrop-blur-xl border-l border-white/10 p-6 overflow-y-auto">
+            <h2 className="text-2xl font-semibold mb-4">
+              Order {selectedOrder.order_number}
+            </h2>
+            <div className="space-y-2">
+              <p>Date: {selectedOrder.created_at}</p>
+              <p>Status: {selectedOrder.shipment?.status ?? 'Pending'}</p>
+              <p>AWB: {selectedOrder.shipment?.awb ?? '—'}</p>
+            </div>
+            <button
+              onClick={() => setSelectedOrder(null)}
+              className="mt-6 w-full bg-white/10 hover:bg-white/20 py-2 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
