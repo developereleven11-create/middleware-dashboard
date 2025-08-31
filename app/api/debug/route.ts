@@ -36,7 +36,17 @@ export async function GET(req: Request) {
     const apiKey =
       '62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038';
 
-    // ✅ FIX: Viniculum wants just the order number string in body
+    const payload = {
+      order_no: [orderNo],      // ✅ order number as array
+      date_from: "",
+      date_to: "",
+      status: [],
+      order_location: "",
+      fulfillmentLocation: "",
+      pageNumber: "1",
+      filterBy: "2"
+    };
+
     const viniRes = await fetch(baseUrl, {
       method: 'POST',
       headers: {
@@ -44,7 +54,7 @@ export async function GET(req: Request) {
         Apikey: apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(orderNo), // 👈 just the number/string directly
+      body: JSON.stringify(payload),
     });
 
     if (!viniRes.ok) {
@@ -61,6 +71,9 @@ export async function GET(req: Request) {
       viniculum: viniOrder,
     });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e.message },
+      { status: 500 }
+    );
   }
 }
