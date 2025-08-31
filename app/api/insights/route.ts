@@ -4,21 +4,21 @@ export async function GET() {
   try {
     const MOCK = process.env.MOCK_MODE !== 'false';
 
+    // Always build base URL (works on Vercel + local dev)
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000';
+
     let orders: any[] = [];
     let shipments: any[] = [];
 
     if (MOCK) {
-      const oRes = await fetch('/data/mockOrders.json');
+      const oRes = await fetch(`${baseUrl}/data/mockOrders.json`);
       orders = await oRes.json();
 
-      const sRes = await fetch('/data/mockShipments.json');
+      const sRes = await fetch(`${baseUrl}/data/mockShipments.json`);
       shipments = await sRes.json();
     } else {
-      const baseUrl =
-        process.env.VERCEL_URL
-          ? `https://${process.env.VERCEL_URL}`
-          : 'http://localhost:3000';
-
       const ordersRes = await fetch(`${baseUrl}/api/orders`, { cache: 'no-store' });
       const ordersJson = await ordersRes.json();
       orders = ordersJson.data ?? [];
