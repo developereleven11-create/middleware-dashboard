@@ -77,27 +77,51 @@ export default function InsightsPage() {
         </button>
       </div>
 
-      {/* Drawer */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
-          <div className="w-full sm:w-[500px] bg-gray-900/70 backdrop-blur-xl border-l border-white/10 p-6 overflow-y-auto">
-            <h2 className="text-2xl font-semibold mb-4">
-              Order {selectedOrder.order_number}
-            </h2>
-            <div className="space-y-2">
-              <p>Date: {selectedOrder.created_at}</p>
-              <p>Status: {selectedOrder.shipment?.status ?? 'Pending'}</p>
-              <p>AWB: {selectedOrder.shipment?.awb ?? '—'}</p>
-            </div>
-            <button
-              onClick={() => setSelectedOrder(null)}
-              className="mt-6 w-full bg-white/10 hover:bg-white/20 py-2 rounded-lg"
+    {/* Drawer */}
+{selectedOrder && (
+  <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+    <div className="w-full sm:w-[500px] bg-gray-900/70 backdrop-blur-xl border-l border-white/10 p-6 overflow-y-auto">
+      <h2 className="text-2xl font-semibold mb-4">
+        Order {selectedOrder.order_number}
+      </h2>
+
+      <div className="space-y-2 text-sm text-gray-300">
+        <p>Date: {new Date(selectedOrder.created_at).toLocaleDateString()}</p>
+        <p>Status: {selectedOrder.shipment?.status ?? 'Pending'}</p>
+        <p>AWB: {selectedOrder.shipment?.awb ?? '—'}</p>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="font-medium mb-2">Products</h3>
+        <ul className="space-y-2">
+          {selectedOrder.line_items?.map((item: any, i: number) => (
+            <li
+              key={i}
+              className="flex justify-between text-sm bg-gray-800/40 rounded-lg px-3 py-2"
             >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+              <span>{item.name} × {item.quantity}</span>
+              <span>₹{item.price}</span>
+            </li>
+          )) || <li className="text-gray-400">No product data</li>}
+        </ul>
+      </div>
+
+      <div className="mt-6 space-y-1 text-sm">
+        <p>Subtotal: ₹{selectedOrder.subtotal_price ?? '—'}</p>
+        {selectedOrder.total_discounts > 0 && (
+          <p>Discounts: -₹{selectedOrder.total_discounts}</p>
+        )}
+        <p className="font-semibold text-lg">
+          Total: ₹{selectedOrder.total_price ?? '—'}
+        </p>
+      </div>
+
+      <button
+        onClick={() => setSelectedOrder(null)}
+        className="mt-6 w-full bg-white/10 hover:bg-white/20 py-2 rounded-lg"
+      >
+        Close
+      </button>
     </div>
-  );
-}
+  </div>
+)}
