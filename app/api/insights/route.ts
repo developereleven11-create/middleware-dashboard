@@ -1,12 +1,4 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-async function loadMock(fileName: string) {
-  const file = path.join(process.cwd(), 'data', fileName);
-  const content = await fs.readFile(file, 'utf-8');
-  return JSON.parse(content);
-}
 
 export async function GET() {
   try {
@@ -16,8 +8,11 @@ export async function GET() {
     let shipments: any[] = [];
 
     if (MOCK) {
-      orders = await loadMock('mockOrders.json');
-      shipments = await loadMock('mockShipments.json');
+      const oRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockOrders.json`);
+      orders = await oRes.json();
+
+      const sRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockShipments.json`);
+      shipments = await sRes.json();
     } else {
       const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/orders`, { cache: 'no-store' });
       const ordersJson = await ordersRes.json();
