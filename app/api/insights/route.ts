@@ -19,18 +19,17 @@ function mergeOrdersWithShipments(
 
 export async function GET() {
   try {
-    // Construct a dummy Request object for compatibility
     const dummyReq = new Request('http://localhost');
 
-    // call orders API directly
+    // Orders API (requires req)
     const ordersRes: any = await getOrders(dummyReq);
     const ordersJson = await ordersRes.json();
     const orders: any[] = ordersJson.data ?? [];
 
-    // call shipments API directly
+    // Shipments API (no req needed)
     let shipments: any[] = [];
     try {
-      const shipmentsRes: any = await getShipments(dummyReq);
+      const shipmentsRes: any = await getShipments();
       const shipmentsJson = await shipmentsRes.json();
       shipments = shipmentsJson.data ?? [];
     } catch {
