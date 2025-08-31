@@ -2,19 +2,23 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Viniculum API creds
     const baseUrl = 'https://pokonut.vineretail.com/RestWS/api/eretail/v1/order/shipmentDetail';
     const apiOwner = 'Suraj';
     const apiKey = '62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038';
 
-    // ⚡ Right now fetching ALL shipment data (later we can pass specific order IDs/filters)
+    const body = {
+      fromDate: "2025-08-01",  // adjust date range
+      toDate: "2025-08-31"
+    };
+
     const res = await fetch(baseUrl, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'ApiOwner': apiOwner,
         'Apikey': apiKey,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(body),
       cache: 'no-store',
     });
 
@@ -24,7 +28,6 @@ export async function GET() {
 
     const data = await res.json();
 
-    // Normalize the response so insights can use it
     const shipments = data?.orderShipmentList?.map((s: any) => ({
       order_number: s.orderNumber,
       awb: s.awbNumber,
