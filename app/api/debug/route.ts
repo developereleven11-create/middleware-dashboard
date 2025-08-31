@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const orderNo = url.searchParams.get('order');
+
+    if (!orderNo) {
+      return NextResponse.json(
+        { ok: false, error: 'Please provide ?order=ORDER_NUMBER' },
+        { status: 400 }
+      );
+    }
+
+    // 🔹 Shopify API
+    const store = process.env.SHOPIFY_STORE;
+    const token = process.env.SHOPIFY_ACCESS_TOKEN;
+
+    const shopifyRes = await fetch(
+      `https://${store}/admin/api/2024-07/orders.json?status=any&name=${orderNo}`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': token!,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const shopifyJson = await shopifyRes.json();
+    const shopifyOrder = shopifyJson.orders?.[0] ?? null;
+
+    // 🔹 Viniculum API
+    const baseUrl =
+      'https://pokonut.vineretail.com/RestWS/api/eretail/v1/order/shipmentDetail';
+    const apiOwner = 'Suraj';
+    const apiKey =
+      '62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038';
+
+    const viniRes = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        ApiOwner: apiOwner,
+        Apikey: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ orderNumbers: [orderNo] }),
+    });
+
+    const viniJson = await viniRes.json();
+    const viniOrder = viniJson?.orders?.[0] ?? null;
+
+    return NextResponse.json({
+      ok: true,
+      orderNumber: orderNo,
+      shopify: shopifyOrder,
+      viniculum: viniOrder,
+    });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+  }
+}
