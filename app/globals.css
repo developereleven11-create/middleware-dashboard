@@ -1,4 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body{@apply bg-gray-950 text-white;}
+
+body {
+  @apply bg-gradient-to-br from-gray-950 via-gray-900 to-black text-gray-100 min-h-screen;
+}
+
+table {
+  @apply w-full text-sm bg-gray-900/40 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden;
+}
+
+th {
+  @apply text-left p-3 font-medium text-gray-300 bg-white/5;
+}
+
+td {
+  @apply p-3 text-gray-200 border-t border-white/5;
+}
+
+button {
+  @apply transition duration-200;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
