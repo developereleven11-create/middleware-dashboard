@@ -2,32 +2,18 @@ import { NextResponse } from 'next/server';
 import { GET as getOrders } from '../orders/route';
 import { GET as getShipments } from '../shipments/route';
 
-function mergeOrdersWithShipments(
-  orders: any[],
-  shipments: any[],
-  filterFn?: (s: any) => boolean
-) {
-  return orders.map((o) => {
-    const shipment = shipments.find((s: any) => s.order_number === o.order_number);
-    if (filterFn && shipment && !filterFn(shipment)) return { ...o };
-    return shipment ? { ...o, shipment } : { ...o };
-  });
-}
-
 export async function GET(req: Request) {
   try {
-    // forward same query params (pagination)
+    // forward pagination query params
     const urlObj = new URL(req.url);
-    const dummyReq = new Request(
-      `http://localhost/api/orders${urlObj.search}`
-    );
+    const dummyReq = new Request(`http://localhost/api/orders${urlObj.search}`);
 
-    // Fetch Shopify Orders
+    // Fetch Shopify orders
     const ordersRes: any = await getOrders(dummyReq);
     const ordersJson = await ordersRes.json();
     const orders: any[] = ordersJson.data ?? [];
 
-    // Fetch Viniculum Shipments
+    // Fetch Viniculum shipments
     let shipments: any[] = [];
     try {
       const shipmentsRes: any = await getShipments();
@@ -37,8 +23,11 @@ export async function GET(req: Request) {
       shipments = [];
     }
 
-    // Merge
-    const merged = mergeOrdersWithShipments(orders, shipments);
+    // Merge: keep full Shopify order, attach shipment if exists
+    const merged = orders.map((o) => {
+      const shipment = shipments.find((s: any) => s.order_number == o.order_number);
+      return shipment ? { ...o, shipment } : o;
+    });
 
     return NextResponse.json({
       ok: true,
