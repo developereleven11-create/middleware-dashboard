@@ -1,22 +1,11 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
-async function loadMock(fileName: string) {
-  const filePath = path.join(process.cwd(), 'public', 'data', fileName);
-  const content = await fs.readFile(filePath, 'utf-8');
-  return JSON.parse(content);
-}
-
-export async function GET() {
-  const MOCK = process.env.MOCK_MODE !== 'false';
+export async function GET(req: Request) {
+  const urlObj = new URL(req.url);
+  const pageInfo = urlObj.searchParams.get('page_info'); // Shopify cursor
+  const limit = urlObj.searchParams.get('limit') || '50'; // default 50, max 250
 
   try {
-    if (MOCK) {
-      const data = await loadMock('mockOrders.json');
-      return NextResponse.json({ ok: true, data });
-    }
-
     const store = process.env.SHOPIFY_STORE;
     const token = process.env.SHOPIFY_ACCESS_TOKEN;
 
@@ -27,7 +16,9 @@ export async function GET() {
       );
     }
 
-    const url = `https://${store}/admin/api/2024-07/orders.json?status=any&limit=20`;
+    let url = `https://${store}/admin/api/2024-07/orders.json?status=any&limit=${limit}`;
+    if (pageInfo) url += `&page_info=${pageInfo}`;
+
     const res = await fetch(url, {
       headers: {
         'X-Shopify-Access-Token': token,
@@ -36,9 +27,33 @@ export async function GET() {
     });
 
     if (!res.ok) throw new Error(`Shopify error ${res.status}`);
-    const json = await res.json();
 
-    return NextResponse.json({ ok: true, data: json.orders });
+    const json = await res.json();
+    const linkHeader = res.headers.get('link');
+
+    // Parse pagination links
+    let nextPage: string | null = null;
+    let prevPage: string | null = null;
+
+    if (linkHeader) {
+      const parts = linkHeader.split(',');
+      for (const part of parts) {
+        const [link, rel] = part.split(';');
+        if (rel.includes('next')) {
+          nextPage = new URL(link.trim().replace(/<|>/g, '')).searchParams.get('page_info');
+        }
+        if (rel.includes('previous')) {
+          prevPage = new URL(link.trim().replace(/<|>/g, '')).searchParams.get('page_info');
+        }
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      data: json.orders,
+      nextPage,
+      prevPage,
+    });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
