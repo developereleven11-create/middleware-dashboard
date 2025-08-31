@@ -1,19 +1,16 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 export async function GET() {
   const MOCK = process.env.MOCK_MODE !== 'false';
 
   try {
     if (MOCK) {
-      const file = path.join(process.cwd(), 'data', 'mockShipments.json');
-      const content = await fs.readFile(file, 'utf-8');
-      const data = JSON.parse(content);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/data/mockShipments.json`);
+      const data = await res.json();
       return NextResponse.json({ ok: true, data });
     }
 
-    // TODO: integrate real shipment provider
+    // TODO: integrate real shipment provider API
     return NextResponse.json(
       { ok: false, error: 'Shipment provider not wired yet' },
       { status: 500 }
