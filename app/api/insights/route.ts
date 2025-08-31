@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// Helper to load mock JSON files from /public/data
+// Helper to load mock JSON
 async function loadMock(fileName: string) {
   const filePath = path.join(process.cwd(), 'public', 'data', fileName);
   const content = await fs.readFile(filePath, 'utf-8');
   return JSON.parse(content);
 }
 
-// Helper to merge orders + shipments
+// Merge helper
 function mergeOrdersWithShipments(
   orders: any[],
   shipments: any[],
@@ -20,7 +20,7 @@ function mergeOrdersWithShipments(
       const shipment = shipments.find(
         (s: any) => s.order_number === o.order_number && filterFn(s)
       );
-      return shipment ? { ...o, shipment } : null;
+      return shipment ? { ...o, shipment } : { ...o }; // return order even if no shipment
     })
     .filter(Boolean);
 }
@@ -36,6 +36,7 @@ export async function GET() {
       orders = await loadMock('mockOrders.json');
       shipments = await loadMock('mockShipments.json');
     } else {
+      // always get Shopify orders
       const baseUrl = process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : 'http://localhost:3000';
@@ -44,9 +45,14 @@ export async function GET() {
       const ordersJson = await ordersRes.json();
       orders = ordersJson.data ?? [];
 
-      const shipmentsRes = await fetch(`${baseUrl}/api/shipments`, { cache: 'no-store' });
-      const shipmentsJson = await shipmentsRes.json();
-      shipments = shipmentsJson.data ?? [];
+      try {
+        // try shipments, but if it fails, fallback to []
+        const shipmentsRes = await fetch(`${baseUrl}/api/shipments`, { cache: 'no-store' });
+        const shipmentsJson = await shipmentsRes.json();
+        shipments = shipmentsJson.data ?? [];
+      } catch {
+        shipments = [];
+      }
     }
 
     const rto = mergeOrdersWithShipments(orders, shipments, (s) => s.rto);
