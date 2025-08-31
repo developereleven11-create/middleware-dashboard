@@ -9,12 +9,14 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 export default function InsightsPage() {
   const { data, error, isLoading } = useSWR('/api/insights', fetcher);
   const [search, setSearch] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div className="text-red-400">Failed to load insights.</div>;
   if (!data) return null;
 
   const allOrders = [...data.rto, ...data.ofd, ...data.inTransit].map((o: any) => ({
+    ...o,
     order: o.order_number,
     pincode: o.shipping_address?.zip ?? '452018',
     state: o.shipping_address?.province_code ?? 'MP',
@@ -79,8 +81,16 @@ export default function InsightsPage() {
             </thead>
             <tbody>
               {filtered.map((o, i) => (
-                <tr key={i} className="border-t border-white/10 hover:bg-white/5 transition">
-                  <td className="p-3 text-blue-400 cursor-pointer hover:underline">{o.order}</td>
+                <tr
+                  key={i}
+                  className="border-t border-white/10 hover:bg-white/5 transition"
+                >
+                  <td
+                    className="p-3 text-blue-400 cursor-pointer hover:underline"
+                    onClick={() => setSelectedOrder(o)}
+                  >
+                    {o.order}
+                  </td>
                   <td className="p-3">{o.pincode}</td>
                   <td className="p-3">{o.state}</td>
                   <td className="p-3"><StatusBadge status={o.shipmentStatus} /></td>
@@ -91,6 +101,54 @@ export default function InsightsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Drawer for Order Details */}
+        {selectedOrder && (
+          <div className="fixed inset-0 bg-black/50 flex justify-end z-50">
+            <div className="w-full sm:w-[500px] h-full bg-gray-900/70 backdrop-blur-xl border-l border-white/10 p-6 overflow-y-auto animate-slideIn">
+              <h2 className="text-2xl font-semibold mb-4">
+                Order {selectedOrder.order}
+              </h2>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-300">Date: {selectedOrder.created_at}</p>
+                <p className="text-sm text-gray-300">Status: {selectedOrder.shipmentStatus}</p>
+                <p className="text-sm text-gray-300">AWB: {selectedOrder.shipment?.awb ?? '—'}</p>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="font-medium mb-2">Products</h3>
+                <ul className="space-y-2">
+                  {selectedOrder.line_items?.map((item: any, i: number) => (
+                    <li
+                      key={i}
+                      className="flex justify-between text-sm bg-gray-800/40 rounded-lg px-3 py-2"
+                    >
+                      <span>{item.name} × {item.quantity}</span>
+                      <span>₹{item.price}</span>
+                    </li>
+                  )) || <li className="text-gray-400 text-sm">No product data</li>}
+                </ul>
+              </div>
+
+              <div className="mt-6 space-y-1 text-sm">
+                <p>Subtotal: ₹{selectedOrder.subtotal_price ?? '—'}</p>
+                {selectedOrder.total_discounts && (
+                  <p>Discounts: -₹{selectedOrder.total_discounts}</p>
+                )}
+                <p className="font-semibold text-lg">
+                  Total: ₹{selectedOrder.total_price ?? '—'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="mt-6 w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
