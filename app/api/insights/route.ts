@@ -5,28 +5,29 @@ import { GET as getShipments } from '../shipments/route';
 function mergeOrdersWithShipments(
   orders: any[],
   shipments: any[],
-  filterFn: (s: any) => boolean
+  filterFn?: (s: any) => boolean
 ) {
-  return orders
-    .map((o) => {
-      const shipment = shipments.find(
-        (s: any) => s.order_number === o.order_number && filterFn(s)
-      );
-      return shipment ? { ...o, shipment } : { ...o };
-    })
-    .filter(Boolean);
+  return orders.map((o) => {
+    const shipment = shipments.find((s: any) => s.order_number === o.order_number);
+    if (filterFn && shipment && !filterFn(shipment)) return { ...o };
+    return shipment ? { ...o, shipment } : { ...o };
+  });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const dummyReq = new Request('http://localhost');
+    // forward same query params (pagination)
+    const urlObj = new URL(req.url);
+    const dummyReq = new Request(
+      `http://localhost/api/orders${urlObj.search}`
+    );
 
-    // Orders API (requires req)
+    // Fetch Shopify Orders
     const ordersRes: any = await getOrders(dummyReq);
     const ordersJson = await ordersRes.json();
     const orders: any[] = ordersJson.data ?? [];
 
-    // Shipments API (no req needed)
+    // Fetch Viniculum Shipments
     let shipments: any[] = [];
     try {
       const shipmentsRes: any = await getShipments();
@@ -36,15 +37,15 @@ export async function GET() {
       shipments = [];
     }
 
-    const rto = mergeOrdersWithShipments(orders, shipments, (s) => s.rto);
-    const ofd = mergeOrdersWithShipments(orders, shipments, (s) =>
-      /ofd|out for delivery/i.test(s.status)
-    );
-    const inTransit = mergeOrdersWithShipments(orders, shipments, (s) =>
-      /transit/i.test(s.status)
-    );
+    // Merge
+    const merged = mergeOrdersWithShipments(orders, shipments);
 
-    return NextResponse.json({ rto, ofd, inTransit });
+    return NextResponse.json({
+      ok: true,
+      data: merged,
+      nextPage: ordersJson.nextPage ?? null,
+      prevPage: ordersJson.prevPage ?? null,
+    });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
