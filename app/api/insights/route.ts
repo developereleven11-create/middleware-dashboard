@@ -1,22 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '20');
-    const offset = (page - 1) * limit;
+    const limit = parseInt(url.searchParams.get("limit") || "20");
 
     // 🔹 Shopify API
     const store = process.env.SHOPIFY_STORE;
     const token = process.env.SHOPIFY_ACCESS_TOKEN;
 
     const shopifyRes = await fetch(
-      `https://${store}/admin/api/2024-07/orders.json?status=any&limit=${limit}&page_info=${offset}`,
+      `https://${store}/admin/api/2024-07/orders.json?status=any&limit=${limit}`,
       {
         headers: {
-          'X-Shopify-Access-Token': token!,
-          'Content-Type': 'application/json',
+          "X-Shopify-Access-Token": token!,
+          "Content-Type": "application/json",
         },
       }
     );
@@ -33,32 +31,32 @@ export async function GET(req: Request) {
     }
 
     // Extract order numbers
-    const orderNumbers = orders.map((o) => o.name?.replace('#', ''));
+    const orderNumbers = orders.map((o) => o.name?.replace("#", ""));
 
     // 🔹 Viniculum API
     const baseUrl =
-      'https://pokonut.vineretail.com/RestWS/api/eretail/v1/order/shipmentDetail';
-    const apiOwner = 'Suraj';
+      "https://pokonut.vineretail.com/RestWS/api/eretail/v1/order/shipmentDetail";
+    const apiOwner = "Suraj";
     const apiKey =
-      '62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038';
+      "62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038";
 
     const payload = {
-      order_no: orderNumbers, // ✅ array of order numbers
+      order_no: orderNumbers,
       date_from: "",
       date_to: "",
       status: [],
       order_location: "",
       fulfillmentLocation: "",
       pageNumber: "1",
-      filterBy: "2"
+      filterBy: "2",
     };
 
     const viniRes = await fetch(baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ApiOwner: apiOwner,
         Apikey: apiKey,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
@@ -70,9 +68,9 @@ export async function GET(req: Request) {
     const viniJson = await viniRes.json();
     const viniOrders: any[] = viniJson?.orders ?? [];
 
-    // 🔹 Merge Shopify + Viniculum data
+    // 🔹 Merge Shopify + Viniculum
     const merged = orders.map((shopifyOrder) => {
-      const orderNo = shopifyOrder.name?.replace('#', '');
+      const orderNo = shopifyOrder.name?.replace("#", "");
       const viniMatch = viniOrders.find((v) => v.order_no === orderNo);
 
       return {
@@ -92,7 +90,7 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ ok: true, data: merged, page, limit });
+    return NextResponse.json({ ok: true, data: merged });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
