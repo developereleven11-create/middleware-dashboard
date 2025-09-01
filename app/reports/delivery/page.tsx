@@ -7,6 +7,7 @@ export default function DeliveryReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debug, setDebug] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -16,12 +17,22 @@ export default function DeliveryReportsPage() {
         const res = await fetch("/api/insights?limit=100");
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Failed to load");
-        // ✅ filter Out for Delivery + In Transit
-        const filtered = json.data.filter(
-          (o: any) =>
-            o.viniculum?.status?.includes("Out for Delivery") ||
-            o.viniculum?.status?.includes("In Transit")
-        );
+
+        // 🔍 Debug: store first 3 raw records
+        setDebug(json.data.slice(0, 3));
+
+        // ✅ filter Out for Delivery + In-Transit (broader match)
+        const filtered = json.data.filter((o: any) => {
+          const s = (o.viniculum?.status || "").toLowerCase();
+          return (
+            s.includes("out for delivery") ||
+            s.includes("ofd") ||
+            s.includes("in transit") ||
+            s.includes("in-transit") ||
+            s.includes("shipped")
+          );
+        });
+
         setOrders(filtered);
       } catch (e: any) {
         setError(e.message);
@@ -48,8 +59,9 @@ export default function DeliveryReportsPage() {
 
   const closeDrawer = () => setSelectedOrder(null);
 
+  // ✅ Safer search
   const filteredOrders = orders.filter((o) =>
-    o.order_number.toString().includes(search)
+    o.order_number?.toString().toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -73,6 +85,18 @@ export default function DeliveryReportsPage() {
       <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
         🚚 Delivery Reports
       </h1>
+
+      {/* 🔍 Debug Section */}
+      {debug.length > 0 && (
+        <div className="mb-6 p-4 bg-gray-800/60 rounded-xl text-xs text-gray-300">
+          <p className="mb-2 font-semibold text-cyan-300">
+            Debug: First 3 raw records from /api/insights
+          </p>
+          <pre className="overflow-x-auto">
+            {JSON.stringify(debug, null, 2)}
+          </pre>
+        </div>
+      )}
 
       {/* Search */}
       <div className="mb-6">
@@ -116,7 +140,8 @@ export default function DeliveryReportsPage() {
                   <Badge
                     text={order.viniculum?.status || "N/A"}
                     color={
-                      order.viniculum?.status?.includes("Out for Delivery")
+                      order.viniculum?.status?.toLowerCase().includes("out") ||
+                      order.viniculum?.status?.toLowerCase().includes("ofd")
                         ? "yellow"
                         : "blue"
                     }
@@ -153,7 +178,6 @@ export default function DeliveryReportsPage() {
                   Order #{selectedOrder.orderNumber}
                 </h2>
 
-                {/* Shopify */}
                 <section className="mb-6">
                   <h3 className="font-semibold text-cyan-300 mb-2">
                     Shopify Details
@@ -171,7 +195,6 @@ export default function DeliveryReportsPage() {
                   </ul>
                 </section>
 
-                {/* Viniculum */}
                 <section>
                   <h3 className="font-semibold text-cyan-300 mb-2">
                     Viniculum Shipment
