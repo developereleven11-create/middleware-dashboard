@@ -1,45 +1,98 @@
 import { NextResponse } from 'next/server';
-import { GET as getOrders } from '../orders/route';
 
 export async function GET(req: Request) {
   try {
-    const urlObj = new URL(req.url);
-    const dummyReq = new Request(`http://localhost/api/orders${urlObj.search}`);
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const offset = (page - 1) * limit;
 
-    // 1. Fetch Shopify orders
-    const ordersRes: any = await getOrders(dummyReq);
-    const ordersJson = await ordersRes.json();
-    const orders: any[] = ordersJson.data ?? [];
+    // 🔹 Shopify API
+    const store = process.env.SHOPIFY_STORE;
+    const token = process.env.SHOPIFY_ACCESS_TOKEN;
 
-    // 2. Collect order numbers
-    const orderNumbers = orders.map((o) => o.order_number);
+    const shopifyRes = await fetch(
+      `https://${store}/admin/api/2024-07/orders.json?status=any&limit=${limit}&page_info=${offset}`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': token!,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // 3. Call Viniculum shipments for these orders
-    let shipments: any[] = [];
-    try {
-      const shipmentsRes = await fetch(`${urlObj.origin}/api/shipments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderNumbers }),
-      });
-      const shipmentsJson = await shipmentsRes.json();
-      shipments = shipmentsJson.data ?? [];
-    } catch {
-      shipments = [];
+    if (!shopifyRes.ok) {
+      throw new Error(`Shopify error: ${shopifyRes.status}`);
     }
 
-    // 4. Merge
-    const merged = orders.map((o) => {
-      const shipment = shipments.find((s: any) => s.order_number == o.order_number);
-      return shipment ? { ...o, shipment } : o;
+    const shopifyJson = await shopifyRes.json();
+    const orders: any[] = shopifyJson.orders ?? [];
+
+    if (orders.length === 0) {
+      return NextResponse.json({ ok: true, data: [] });
+    }
+
+    // Extract order numbers
+    const orderNumbers = orders.map((o) => o.name?.replace('#', ''));
+
+    // 🔹 Viniculum API
+    const baseUrl =
+      'https://pokonut.vineretail.com/RestWS/api/eretail/v1/order/shipmentDetail';
+    const apiOwner = 'Suraj';
+    const apiKey =
+      '62f9cb823fc9498780ee065d3677c865e628bfab206249c2941b038';
+
+    const payload = {
+      order_no: orderNumbers, // ✅ array of order numbers
+      date_from: "",
+      date_to: "",
+      status: [],
+      order_location: "",
+      fulfillmentLocation: "",
+      pageNumber: "1",
+      filterBy: "2"
+    };
+
+    const viniRes = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        ApiOwner: apiOwner,
+        Apikey: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
 
-    return NextResponse.json({
-      ok: true,
-      data: merged,
-      nextPage: ordersJson.nextPage ?? null,
-      prevPage: ordersJson.prevPage ?? null,
+    if (!viniRes.ok) {
+      throw new Error(`Viniculum error: ${viniRes.status}`);
+    }
+
+    const viniJson = await viniRes.json();
+    const viniOrders: any[] = viniJson?.orders ?? [];
+
+    // 🔹 Merge Shopify + Viniculum data
+    const merged = orders.map((shopifyOrder) => {
+      const orderNo = shopifyOrder.name?.replace('#', '');
+      const viniMatch = viniOrders.find((v) => v.order_no === orderNo);
+
+      return {
+        id: shopifyOrder.id,
+        order_number: orderNo,
+        created_at: shopifyOrder.created_at,
+        total_price: shopifyOrder.total_price,
+        financial_status: shopifyOrder.financial_status,
+        fulfillment_status: shopifyOrder.fulfillment_status,
+        line_items: shopifyOrder.line_items.map((li: any) => ({
+          title: li.title,
+          quantity: li.quantity,
+          price: li.price,
+          sku: li.sku,
+        })),
+        viniculum: viniMatch ?? null,
+      };
     });
+
+    return NextResponse.json({ ok: true, data: merged, page, limit });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
