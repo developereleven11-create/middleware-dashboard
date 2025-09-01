@@ -1,14 +1,48 @@
 "use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { BarChart3, Truck, Wallet } from "lucide-react";
+
+const navItems = [
+  {
+    href: "/insights",
+    label: "Insights",
+    icon: BarChart3,
+  },
+  {
+    href: "/reports/delivery",
+    label: "Delivery Reports",
+    icon: Truck,
+  },
+  {
+    href: "/remittance",
+    label: "Remittance",
+    icon: Wallet,
+  },
+];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="w-64 bg-gray-900 text-gray-200 h-screen p-4 fixed left-0 top-0">
-      <h2 className="text-xl font-bold mb-6">Dashboard</h2>
-      <nav className="space-y-4">
-        <Link href="/insights" className="block hover:text-white">Insights</Link>
-        <Link href="/reports/delivery" className="block hover:text-white">Delivery Reports</Link>
-        <Link href="/remittance" className="block hover:text-white">Remittance</Link>
+    <aside className="bg-gray-900 text-gray-100 w-64 min-h-screen border-r border-gray-800 backdrop-blur-md bg-opacity-80">
+      <div className="p-6 font-bold text-xl">📊 Dashboard</div>
+      <nav className="flex flex-col space-y-2 px-4">
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+              pathname.startsWith(href)
+                ? "bg-gray-800 text-white"
+                : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            }`}
+          >
+            <Icon size={18} />
+            <span>{label}</span>
+          </Link>
+        ))}
       </nav>
     </aside>
   );
