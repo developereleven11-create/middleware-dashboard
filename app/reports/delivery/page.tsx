@@ -7,6 +7,8 @@ export default function DeliveryReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -14,7 +16,7 @@ export default function DeliveryReportsPage() {
         const res = await fetch("/api/insights?limit=100");
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Failed to load");
-        // Filter only OTD + In-Transit
+        // ✅ filter Out for Delivery + In Transit
         const filtered = json.data.filter(
           (o: any) =>
             o.viniculum?.status?.includes("Out for Delivery") ||
@@ -29,6 +31,22 @@ export default function DeliveryReportsPage() {
     };
     fetchOrders();
   }, []);
+
+  const handleRowClick = async (orderNo: string) => {
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderNo}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      setSelectedOrder(json);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDrawer = () => setSelectedOrder(null);
 
   const filteredOrders = orders.filter((o) =>
     o.order_number.toString().includes(search)
@@ -51,7 +69,7 @@ export default function DeliveryReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-gray-950 text-white p-8 relative">
       <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
         🚚 Delivery Reports
       </h1>
@@ -84,7 +102,8 @@ export default function DeliveryReportsPage() {
             {filteredOrders.map((order) => (
               <tr
                 key={order.id}
-                className="hover:bg-gray-800/40 transition duration-150"
+                className="hover:bg-gray-800/40 transition duration-150 cursor-pointer"
+                onClick={() => handleRowClick(order.order_number)}
               >
                 <td className="p-4 font-semibold text-cyan-300">
                   #{order.order_number}
@@ -114,6 +133,72 @@ export default function DeliveryReportsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Drawer */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50">
+          <div className="w-full md:w-[500px] bg-gray-900 text-white p-6 overflow-y-auto shadow-xl animate-slideIn">
+            <button
+              onClick={closeDrawer}
+              className="text-gray-400 hover:text-white mb-4 text-sm"
+            >
+              ✖ Close
+            </button>
+
+            {detailLoading ? (
+              <p className="animate-pulse text-gray-400">Loading details...</p>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold mb-4">
+                  Order #{selectedOrder.orderNumber}
+                </h2>
+
+                {/* Shopify */}
+                <section className="mb-6">
+                  <h3 className="font-semibold text-cyan-300 mb-2">
+                    Shopify Details
+                  </h3>
+                  <p>Amount: ₹{selectedOrder.shopify?.total_price}</p>
+                  <p>Status: {selectedOrder.shopify?.financial_status}</p>
+                  <p>Fulfillment: {selectedOrder.shopify?.fulfillment_status}</p>
+                  <h4 className="mt-3 font-semibold">Products:</h4>
+                  <ul className="list-disc pl-5 text-sm text-gray-300">
+                    {selectedOrder.shopify?.line_items?.map((li: any) => (
+                      <li key={li.id}>
+                        {li.title} (x{li.quantity}) — ₹{li.price}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                {/* Viniculum */}
+                <section>
+                  <h3 className="font-semibold text-cyan-300 mb-2">
+                    Viniculum Shipment
+                  </h3>
+                  {selectedOrder.viniculum ? (
+                    <>
+                      <p>Status: {selectedOrder.viniculum.status}</p>
+                      <p>
+                        Transporter:{" "}
+                        {selectedOrder.viniculum?.shipDetail?.[0]?.transporter ||
+                          "-"}
+                      </p>
+                      <p>
+                        AWB:{" "}
+                        {selectedOrder.viniculum?.shipDetail?.[0]
+                          ?.tracking_number || "-"}
+                      </p>
+                    </>
+                  ) : (
+                    <p>No shipment data</p>
+                  )}
+                </section>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
