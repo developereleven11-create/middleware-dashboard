@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Order {
-  id               String   @id
-  orderNumber      String
-  totalPrice       String
-  financialStatus  String?
+  id                String   @id
+  orderNumber       String   @unique  // <-- make this unique
+  totalPrice        Float
+  financialStatus   String?
   fulfillmentStatus String?
-  createdAt        DateTime
-  updatedAt        DateTime @updatedAt
-  data             Json     // <-- this stores raw Shopify JSON
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  data              Json     // raw Shopify JSON
 }
