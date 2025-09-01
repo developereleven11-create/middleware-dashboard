@@ -29,7 +29,8 @@ export default function InsightsPage() {
   const handleRowClick = async (orderNo: string) => {
     setDetailLoading(true);
     try {
-      const res = await fetch(`/api/order/${orderNo}`);
+      // ✅ FIX: use plural "orders"
+      const res = await fetch(`/api/orders/${orderNo}`);
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
       setSelectedOrder(json);
