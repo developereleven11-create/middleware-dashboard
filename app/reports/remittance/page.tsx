@@ -16,8 +16,7 @@ type ReconciliationRecord = {
 };
 
 export default function RemittanceReport() {
-  // Mock dataset for testing
-  const [records] = useState<ReconciliationRecord[]>([
+  const [records, setRecords] = useState<ReconciliationRecord[]>([
     {
       order_no: "2025443001",
       shopify_total: 1000,
@@ -73,9 +72,45 @@ export default function RemittanceReport() {
     }
   };
 
+  // Mock file upload handler
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    alert(`✅ Uploaded: ${file.name}\n(Parsing & reconciliation coming soon)`);
+
+    // For demo: simulate marking one Pending order as Matched
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.status === "Pending"
+          ? {
+              ...r,
+              remittances: [
+                { provider: "Delhivery", amount: r.shopify_total, payment_date: "2025-09-05" },
+              ],
+              status: "Matched",
+            }
+          : r
+      )
+    );
+  };
+
   return (
     <div className="p-8 text-white">
       <h1 className="text-2xl font-bold mb-6">💰 Remittance & Reconciliation</h1>
+
+      {/* Upload Section */}
+      <div className="mb-8 p-6 border-2 border-dashed border-cyan-500/50 rounded-xl bg-gray-900/40 backdrop-blur-md flex flex-col items-center justify-center">
+        <p className="mb-3 text-gray-300">
+          Drag & drop your Excel file here, or click to upload
+        </p>
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFileUpload}
+          className="cursor-pointer"
+        />
+      </div>
 
       {/* Filters */}
       <div className="flex space-x-4 mb-6">
