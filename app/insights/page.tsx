@@ -7,11 +7,13 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await fetch("/api/insights?page=1&limit=20");
+        const res = await fetch("/api/insights?limit=20");
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Failed to load");
         setOrders(json.data);
@@ -23,6 +25,22 @@ export default function InsightsPage() {
     };
     fetchOrders();
   }, []);
+
+  const handleRowClick = async (orderNo: string) => {
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`/api/order/${orderNo}`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      setSelectedOrder(json);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDrawer = () => setSelectedOrder(null);
 
   const filteredOrders = orders.filter((o) =>
     o.order_number.toString().includes(search)
@@ -45,7 +63,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
+    <div className="min-h-screen bg-gray-950 text-white p-8 relative">
       {/* Header */}
       <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
         📊 Insights Dashboard
@@ -100,12 +118,15 @@ export default function InsightsPage() {
             {filteredOrders.map((order) => (
               <tr
                 key={order.id}
-                className="hover:bg-gray-800/40 transition duration-150"
+                className="hover:bg-gray-800/40 transition duration-150 cursor-pointer"
+                onClick={() => handleRowClick(order.order_number)}
               >
                 <td className="p-4 font-semibold text-indigo-300">
                   #{order.order_number}
                 </td>
-                <td className="p-4">{new Date(order.created_at).toLocaleString()}</td>
+                <td className="p-4">
+                  {new Date(order.created_at).toLocaleString()}
+                </td>
                 <td className="p-4">₹{order.total_price}</td>
                 <td className="p-4">
                   <Badge
@@ -141,13 +162,83 @@ export default function InsightsPage() {
                     }
                   />
                 </td>
-                <td className="p-4">{order.viniculum?.shipDetail?.[0]?.transporter || "-"}</td>
-                <td className="p-4">{order.viniculum?.shipDetail?.[0]?.tracking_number || "-"}</td>
+                <td className="p-4">
+                  {order.viniculum?.shipDetail?.[0]?.transporter || "-"}
+                </td>
+                <td className="p-4">
+                  {order.viniculum?.shipDetail?.[0]?.tracking_number || "-"}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Drawer Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50">
+          <div className="w-full md:w-[500px] bg-gray-900 text-white p-6 overflow-y-auto shadow-xl animate-slideIn">
+            <button
+              onClick={closeDrawer}
+              className="text-gray-400 hover:text-white mb-4 text-sm"
+            >
+              ✖ Close
+            </button>
+
+            {detailLoading ? (
+              <p className="animate-pulse text-gray-400">Loading details...</p>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold mb-4">
+                  Order #{selectedOrder.orderNumber}
+                </h2>
+
+                {/* Shopify */}
+                <section className="mb-6">
+                  <h3 className="font-semibold text-indigo-300 mb-2">
+                    Shopify Details
+                  </h3>
+                  <p>Amount: ₹{selectedOrder.shopify?.total_price}</p>
+                  <p>Status: {selectedOrder.shopify?.financial_status}</p>
+                  <p>Fulfillment: {selectedOrder.shopify?.fulfillment_status}</p>
+                  <h4 className="mt-3 font-semibold">Products:</h4>
+                  <ul className="list-disc pl-5 text-sm text-gray-300">
+                    {selectedOrder.shopify?.line_items?.map((li: any) => (
+                      <li key={li.id}>
+                        {li.title} (x{li.quantity}) — ₹{li.price}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                {/* Viniculum */}
+                <section>
+                  <h3 className="font-semibold text-indigo-300 mb-2">
+                    Viniculum Shipment
+                  </h3>
+                  {selectedOrder.viniculum ? (
+                    <>
+                      <p>Status: {selectedOrder.viniculum.status}</p>
+                      <p>
+                        Transporter:{" "}
+                        {selectedOrder.viniculum?.shipDetail?.[0]?.transporter ||
+                          "-"}
+                      </p>
+                      <p>
+                        AWB:{" "}
+                        {selectedOrder.viniculum?.shipDetail?.[0]
+                          ?.tracking_number || "-"}
+                      </p>
+                    </>
+                  ) : (
+                    <p>No shipment data</p>
+                  )}
+                </section>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,7 +264,9 @@ function Badge({ text, color }: { text: string; color: string }) {
   };
   return (
     <span
-      className={`px-3 py-1 rounded-full text-xs font-medium border ${colors[color] || colors.gray}`}
+      className={`px-3 py-1 rounded-full text-xs font-medium border ${
+        colors[color] || colors.gray
+      }`}
     >
       {text}
     </span>
