@@ -8,15 +8,13 @@ datasource db {
 }
 
 model Order {
-  id                String   @id
+  id                String   @id @default(cuid())   // Auto-generated ID
   orderNumber       String   @unique
   totalPrice        Float
   financialStatus   String?
   fulfillmentStatus String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
-  // New fields
-  rawData           Json     // store raw Shopify/Viniculum data
-  provider          String   // e.g., "shopify", "viniculum"
+  rawData           Json
+  provider          String
 }
