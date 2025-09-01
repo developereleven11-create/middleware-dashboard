@@ -9,11 +9,14 @@ datasource db {
 
 model Order {
   id                String   @id
-  orderNumber       String   @unique  // <-- make this unique
+  orderNumber       String   @unique
   totalPrice        Float
   financialStatus   String?
   fulfillmentStatus String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  data              Json     // raw Shopify JSON
+
+  // New fields
+  rawData           Json     // store raw Shopify/Viniculum data
+  provider          String   // e.g., "shopify", "viniculum"
 }
