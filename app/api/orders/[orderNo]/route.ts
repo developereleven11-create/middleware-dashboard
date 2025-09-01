@@ -12,7 +12,7 @@ export async function GET(
     const token = process.env.SHOPIFY_ACCESS_TOKEN;
 
     const shopifyRes = await fetch(
-      `https://${store}/admin/api/2024-07/orders.json?status=any&name=${orderNo}`,
+      `https://${store}/admin/api/2024-07/orders.json?status=any&limit=250`,
       {
         headers: {
           "X-Shopify-Access-Token": token!,
@@ -26,7 +26,9 @@ export async function GET(
     }
 
     const shopifyJson = await shopifyRes.json();
-    const shopifyOrder = shopifyJson.orders?.[0] ?? null;
+    const shopifyOrder = shopifyJson.orders.find(
+      (o: any) => o.name?.replace("#", "") === orderNo
+    );
 
     // 🔹 Viniculum
     const baseUrl =
