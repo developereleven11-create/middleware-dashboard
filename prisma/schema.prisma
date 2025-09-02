@@ -13,11 +13,12 @@ model Order {
   totalPrice        Float
   financialStatus   String?
   fulfillmentStatus String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  viniculumStatus   String?       // NEW - from Viniculum sync
+  provider          String        @default("shopify") // "shopify" | "viniculum"
 
   rawData           Json?         // store raw Shopify/Viniculum JSON
-  provider          String        @default("shopify") // "shopify" | "viniculum"
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   remittances       Remittance[]
 }
@@ -31,8 +32,15 @@ model Remittance {
   rawData     Json?    // optional JSON from Excel/API
 
   // Relation back to Order
-  order   Order? @relation(fields: [orderNumber], references: [orderNumber], onDelete: Cascade)
+  order       Order?   @relation(fields: [orderNumber], references: [orderNumber], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Meta {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String?
   updatedAt DateTime @updatedAt
 }
