@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Order {
-  id                String   @id @default(cuid())
-  orderNumber       String   @unique
+  id                String        @id @default(cuid())
+  orderNumber       String        @unique
   totalPrice        Float
   financialStatus   String?
   fulfillmentStatus String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  rawData           Json     // store raw Shopify/Viniculum JSON
-  provider          String   // "shopify" | "viniculum"
+  rawData           Json?         // store raw Shopify/Viniculum JSON
+  provider          String        @default("shopify") // "shopify" | "viniculum"
 
   remittances       Remittance[]
 }
@@ -28,21 +28,11 @@ model Remittance {
   provider    String   // "shiprocket", "delhivery", "razorpay", etc
   amount      Float
   receivedAt  DateTime
-  rawData     Json?    // optional JSON from excel/API
+  rawData     Json?    // optional JSON from Excel/API
 
-  // Relations
+  // Relation back to Order
   order   Order? @relation(fields: [orderNumber], references: [orderNumber], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-model Order {
-  id               String   @id
-  orderNumber      String   @unique
-  createdAt        DateTime
-  totalPrice       Float
-  financialStatus  String?
-  fulfillmentStatus String?
-  rawData          Json?
-  provider         String   @default("shopify")
 }
