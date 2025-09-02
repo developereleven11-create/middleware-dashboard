@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const res = await fetch("https://your-shopify-url/admin/api/2023-10/orders.json?limit=50", {
+    const res = await fetch("https://pokonut.myshopify.com/admin/api/2023-10/orders.json?limit=50", {
       headers: {
         "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
       },
