@@ -8,9 +8,6 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate && prisma db push"
-    "migrate:deploy": "prisma migrate deploy",
-"migrate:reset": "prisma migrate reset --force"
-
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
