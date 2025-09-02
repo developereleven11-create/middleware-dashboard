@@ -10,10 +10,15 @@ export default function InsightsPage() {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const limit = 20;
+
   useEffect(() => {
     const fetchOrders = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/insights?limit=20");
+        const res = await fetch(`/api/insights?page=${page}&limit=${limit}`);
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || "Failed to load");
         setOrders(json.data);
@@ -24,12 +29,11 @@ export default function InsightsPage() {
       }
     };
     fetchOrders();
-  }, []);
+  }, [page]);
 
   const handleRowClick = async (orderNo: string) => {
     setDetailLoading(true);
     try {
-      // ✅ FIX: use plural "orders"
       const res = await fetch(`/api/orders/${orderNo}`);
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
@@ -44,7 +48,7 @@ export default function InsightsPage() {
   const closeDrawer = () => setSelectedOrder(null);
 
   const filteredOrders = orders.filter((o) =>
-    o.order_number.toString().includes(search)
+    o.orderNumber.toString().includes(search)
   );
 
   if (loading) {
@@ -75,22 +79,24 @@ export default function InsightsPage() {
         <KPI label="Total Orders" value={orders.length} />
         <KPI
           label="Pending"
-          value={orders.filter((o) => o.financial_status === "pending").length}
+          value={orders.filter((o) => o.financialStatus === "pending").length}
         />
         <KPI
           label="Shipped"
-          value={orders.filter((o) => o.viniculum?.status?.includes("Shipped"))
-            .length}
+          value={orders.filter((o) =>
+            o.viniculumStatus?.includes("Shipped")
+          ).length}
         />
         <KPI
           label="RTO"
-          value={orders.filter((o) => o.viniculum?.status?.includes("RTO"))
-            .length}
+          value={orders.filter((o) =>
+            o.viniculumStatus?.includes("RTO")
+          ).length}
         />
       </div>
 
       {/* Search */}
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <input
           type="text"
           placeholder="🔍 Search by Order Number..."
@@ -98,6 +104,23 @@ export default function InsightsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+
+        {/* Pagination Controls */}
+        <div className="space-x-2">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 bg-gray-800/60 rounded disabled:opacity-40"
+          >
+            ◀ Prev
+          </button>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            className="px-3 py-1 bg-gray-800/60 rounded"
+          >
+            Next ▶
+          </button>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -111,8 +134,6 @@ export default function InsightsPage() {
               <th className="p-4">Financial</th>
               <th className="p-4">Fulfillment</th>
               <th className="p-4">Viniculum Status</th>
-              <th className="p-4">Transporter</th>
-              <th className="p-4">AWB</th>
             </tr>
           </thead>
           <tbody>
@@ -120,22 +141,22 @@ export default function InsightsPage() {
               <tr
                 key={order.id}
                 className="hover:bg-gray-800/40 transition duration-150 cursor-pointer"
-                onClick={() => handleRowClick(order.order_number)}
+                onClick={() => handleRowClick(order.orderNumber)}
               >
                 <td className="p-4 font-semibold text-indigo-300">
-                  #{order.order_number}
+                  #{order.orderNumber}
                 </td>
                 <td className="p-4">
-                  {new Date(order.created_at).toLocaleString()}
+                  {new Date(order.createdAt).toLocaleString()}
                 </td>
-                <td className="p-4">₹{order.total_price}</td>
+                <td className="p-4">₹{order.totalPrice}</td>
                 <td className="p-4">
                   <Badge
-                    text={order.financial_status}
+                    text={order.financialStatus || "N/A"}
                     color={
-                      order.financial_status === "paid"
+                      order.financialStatus === "paid"
                         ? "green"
-                        : order.financial_status === "pending"
+                        : order.financialStatus === "pending"
                         ? "yellow"
                         : "red"
                     }
@@ -143,9 +164,9 @@ export default function InsightsPage() {
                 </td>
                 <td className="p-4">
                   <Badge
-                    text={order.fulfillment_status || "unfulfilled"}
+                    text={order.fulfillmentStatus || "unfulfilled"}
                     color={
-                      order.fulfillment_status === "fulfilled"
+                      order.fulfillmentStatus === "fulfilled"
                         ? "green"
                         : "gray"
                     }
@@ -153,21 +174,15 @@ export default function InsightsPage() {
                 </td>
                 <td className="p-4">
                   <Badge
-                    text={order.viniculum?.status || "N/A"}
+                    text={order.viniculumStatus || "N/A"}
                     color={
-                      order.viniculum?.status?.includes("RTO")
+                      order.viniculumStatus?.includes("RTO")
                         ? "red"
-                        : order.viniculum?.status?.includes("Shipped")
+                        : order.viniculumStatus?.includes("Shipped")
                         ? "blue"
                         : "gray"
                     }
                   />
-                </td>
-                <td className="p-4">
-                  {order.viniculum?.shipDetail?.[0]?.transporter || "-"}
-                </td>
-                <td className="p-4">
-                  {order.viniculum?.shipDetail?.[0]?.tracking_number || "-"}
                 </td>
               </tr>
             ))}
@@ -194,46 +209,22 @@ export default function InsightsPage() {
                   Order #{selectedOrder.orderNumber}
                 </h2>
 
-                {/* Shopify */}
+                {/* Raw Shopify JSON */}
                 <section className="mb-6">
                   <h3 className="font-semibold text-indigo-300 mb-2">
                     Shopify Details
                   </h3>
-                  <p>Amount: ₹{selectedOrder.shopify?.total_price}</p>
-                  <p>Status: {selectedOrder.shopify?.financial_status}</p>
-                  <p>Fulfillment: {selectedOrder.shopify?.fulfillment_status}</p>
-                  <h4 className="mt-3 font-semibold">Products:</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-300">
-                    {selectedOrder.shopify?.line_items?.map((li: any) => (
-                      <li key={li.id}>
-                        {li.title} (x{li.quantity}) — ₹{li.price}
-                      </li>
-                    ))}
-                  </ul>
+                  <pre className="text-xs bg-gray-800 p-2 rounded">
+                    {JSON.stringify(selectedOrder.rawData, null, 2)}
+                  </pre>
                 </section>
 
                 {/* Viniculum */}
                 <section>
                   <h3 className="font-semibold text-indigo-300 mb-2">
-                    Viniculum Shipment
+                    Viniculum Status
                   </h3>
-                  {selectedOrder.viniculum ? (
-                    <>
-                      <p>Status: {selectedOrder.viniculum.status}</p>
-                      <p>
-                        Transporter:{" "}
-                        {selectedOrder.viniculum?.shipDetail?.[0]?.transporter ||
-                          "-"}
-                      </p>
-                      <p>
-                        AWB:{" "}
-                        {selectedOrder.viniculum?.shipDetail?.[0]
-                          ?.tracking_number || "-"}
-                      </p>
-                    </>
-                  ) : (
-                    <p>No shipment data</p>
-                  )}
+                  <p>{selectedOrder.viniculumStatus || "N/A"}</p>
                 </section>
               </>
             )}
