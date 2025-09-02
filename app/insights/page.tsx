@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 
 export default function InsightsPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -14,20 +15,22 @@ export default function InsightsPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
 
+  // Fetch Orders (used on load + after sync)
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/insights?page=${page}&limit=${limit}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to load");
+      setOrders(json.data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/insights?page=${page}&limit=${limit}`);
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.error || "Failed to load");
-        setOrders(json.data);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
   }, [page]);
 
@@ -36,7 +39,7 @@ export default function InsightsPage() {
     try {
       const res = await fetch(`/api/orders/${orderNo}`);
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error);
+      if (!res.ok) throw new Error(json.error);
       setSelectedOrder(json);
     } catch (e: any) {
       setError(e.message);
@@ -70,9 +73,12 @@ export default function InsightsPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-8 relative">
       {/* Header */}
-      <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
-        📊 Insights Dashboard
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
+          📊 Insights Dashboard
+        </h1>
+        <SyncButton onSync={fetchOrders} />
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
@@ -89,13 +95,11 @@ export default function InsightsPage() {
         />
         <KPI
           label="RTO"
-          value={orders.filter((o) =>
-            o.viniculumStatus?.includes("RTO")
-          ).length}
+          value={orders.filter((o) => o.viniculumStatus?.includes("RTO")).length}
         />
       </div>
 
-      {/* Search */}
+      {/* Search + Pagination */}
       <div className="mb-6 flex justify-between items-center">
         <input
           type="text"
@@ -236,6 +240,41 @@ export default function InsightsPage() {
 }
 
 /* --- Components --- */
+
+function SyncButton({ onSync }: { onSync: () => Promise<void> }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSync = async () => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/jobs/syncShopify");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Sync failed");
+      setMessage(`✅ Synced ${json.count || 0} orders`);
+      await onSync(); // refresh table
+    } catch (err) {
+      setMessage("❌ Error syncing orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleSync}
+        disabled={loading}
+        className="flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-sm font-medium"
+      >
+        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        {loading ? "Syncing..." : "Sync Now"}
+      </button>
+      {message && <p className="text-xs text-gray-400">{message}</p>}
+    </div>
+  );
+}
 
 function KPI({ label, value }: { label: string; value: number }) {
   return (
