@@ -303,3 +303,4 @@ function Badge({ text, color }: { text: string; color: string }) {
     </span>
   );
 }
+
