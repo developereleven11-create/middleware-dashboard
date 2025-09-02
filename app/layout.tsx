@@ -16,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               🔍 Insights
             </Link>
+
             <div className="mt-4">
               <p className="text-xs uppercase tracking-wider text-gray-400 mb-2">
                 Reports
@@ -25,6 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="block px-3 py-2 rounded-lg hover:bg-gray-800/60"
               >
                 🚚 Delivery Reports
+              </Link>
+              <Link
+                href="/reports/remittance"
+                className="block px-3 py-2 rounded-lg hover:bg-gray-800/60"
+              >
+                💰 Remittance
               </Link>
             </div>
           </nav>
