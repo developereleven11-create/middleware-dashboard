@@ -16,7 +16,7 @@ const navItems = [
     icon: Truck,
   },
   {
-    href: "/remittance",
+    href: "/reports/remittance",
     label: "Remittance",
     icon: Wallet,
   },
